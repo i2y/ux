@@ -1,11 +1,15 @@
 mod bundle;
 mod cli;
+#[cfg(target_os = "macos")]
 mod codesign;
 mod config;
+#[cfg(target_os = "macos")]
 mod dmg;
 mod download;
 mod embed;
+#[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "macos")]
 mod notarize;
 mod platform;
 mod run;

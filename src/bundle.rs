@@ -4,14 +4,19 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::cli::BundleFormat;
-use crate::codesign;
 use crate::config::Config;
-use crate::dmg;
 use crate::download::{download_uv, download_ux_stub, get_stub_cache_dir, get_uv_cache_dir};
 use crate::embed::{BundleMetadata, create_archive, create_bundle};
-use crate::macos;
-use crate::notarize;
 use crate::platform::Platform;
+
+#[cfg(target_os = "macos")]
+use crate::codesign;
+#[cfg(target_os = "macos")]
+use crate::dmg;
+#[cfg(target_os = "macos")]
+use crate::macos;
+#[cfg(target_os = "macos")]
+use crate::notarize;
 
 /// Create a single-file bundled executable
 pub async fn create_bundled_binary(
@@ -33,18 +38,27 @@ pub async fn create_bundled_binary(
 
     // Check format compatibility and handle .app bundle
     if matches!(format, BundleFormat::App) {
-        if platform.os != crate::platform::Os::Darwin {
-            return Err(anyhow!("--format app is only supported on macOS (Darwin)"));
+        #[cfg(target_os = "macos")]
+        {
+            if platform.os != crate::platform::Os::Darwin {
+                return Err(anyhow!("--format app is only supported on macOS (Darwin)"));
+            }
+            return create_app_bundle(
+                project_dir,
+                output_path,
+                &config,
+                do_codesign,
+                do_notarize,
+                do_dmg,
+            )
+            .await;
         }
-        return create_app_bundle(
-            project_dir,
-            output_path,
-            &config,
-            do_codesign,
-            do_notarize,
-            do_dmg,
-        )
-        .await;
+        #[cfg(not(target_os = "macos"))]
+        {
+            return Err(anyhow!(
+                "--format app is only supported when running on macOS"
+            ));
+        }
     }
 
     // Validate macOS-only options
@@ -168,6 +182,7 @@ pub fn init_config(project_dir: &Path) -> Result<()> {
 }
 
 /// Create macOS .app bundle
+#[cfg(target_os = "macos")]
 async fn create_app_bundle(
     project_dir: &Path,
     output_path: &Path,
@@ -277,6 +292,7 @@ async fn create_app_bundle(
 }
 
 /// Get code signing identity from config or auto-detect
+#[cfg(target_os = "macos")]
 fn get_codesign_identity(config: &Config) -> Result<String> {
     // Check config first
     if let Some(ref macos_config) = config.macos
