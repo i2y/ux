@@ -122,9 +122,6 @@ jobs:
   # PyPI publishing with maturin
   pypi-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64, aarch64]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
@@ -133,13 +130,13 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1.49.4
         with:
-          target: ${{ matrix.target }}
+          target: x86_64
           args: --release --out dist
           manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v6
         with:
-          name: wheels-linux-${{ matrix.target }}
+          name: wheels-linux-x86_64
           path: dist
 
   pypi-windows:
