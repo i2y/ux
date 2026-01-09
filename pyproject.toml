@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "ux-py"
-version = "0.1.1"
+version = "0.1.2"
 description = "uv-based Python App Launcher - distribute Python apps as single executables"
 readme = "README.md"
 license = { text = "MIT" }
