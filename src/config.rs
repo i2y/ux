@@ -136,7 +136,6 @@ impl Config {
             "No entry point found. Set [tool.ux].entry or define [project.scripts] in pyproject.toml"
         ))
     }
-
 }
 
 #[cfg(test)]
