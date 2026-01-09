@@ -45,10 +45,10 @@ pub struct UxConfig {
     pub entry: Option<String>,
     /// uv version to use (default: "latest")
     pub uv_version: Option<String>,
-    /// Files/directories to include in bundle (default: auto-detect)
+    /// Files/directories to include in bundle
+    /// Default: ["*.py", "pyproject.toml", "uv.lock"]
+    /// Use "dir/" suffix to include entire directory (e.g., "assets/")
     pub include: Option<Vec<String>>,
-    /// Files/directories to exclude from bundle
-    pub exclude: Option<Vec<String>>,
     /// macOS-specific configuration
     pub macos: Option<MacOSConfig>,
 }
@@ -60,9 +60,7 @@ pub struct Config {
     pub project_name: String,
     pub entry_point: String,
     pub uv_version: String,
-    #[allow(dead_code)]
     pub include: Vec<String>,
-    pub exclude: Vec<String>,
     pub macos: Option<MacOSConfig>,
 }
 
@@ -104,19 +102,17 @@ impl Config {
         // Get uv version
         let uv_version = ux_config.uv_version.unwrap_or_else(|| "latest".to_string());
 
-        // Get include/exclude patterns
-        let include = ux_config.include.unwrap_or_default();
-        let exclude = ux_config.exclude.unwrap_or_else(|| {
+        // Get include patterns (whitelist approach)
+        let include = ux_config.include.unwrap_or_else(|| {
             vec![
-                ".git".to_string(),
-                ".venv".to_string(),
-                "__pycache__".to_string(),
-                "*.pyc".to_string(),
-                ".pytest_cache".to_string(),
-                ".mypy_cache".to_string(),
-                "dist".to_string(),
-                "build".to_string(),
-                "*.egg-info".to_string(),
+                "*.py".to_string(),
+                "*.yaml".to_string(),
+                "*.yml".to_string(),
+                "*.json".to_string(),
+                "pyproject.toml".to_string(),
+                "uv.lock".to_string(),
+                "README.md".to_string(),
+                "LICENSE".to_string(),
             ]
         });
 
@@ -129,7 +125,6 @@ impl Config {
             entry_point,
             uv_version,
             include,
-            exclude,
             macos,
         })
     }
@@ -153,25 +148,6 @@ impl Config {
         ))
     }
 
-    /// Check if a path should be excluded
-    #[allow(dead_code)]
-    pub fn should_exclude(&self, path: &Path) -> bool {
-        let path_str = path.to_string_lossy();
-
-        for pattern in &self.exclude {
-            if pattern.contains('*') {
-                // Simple glob matching
-                let pattern = pattern.replace("*", "");
-                if path_str.contains(&pattern) {
-                    return true;
-                }
-            } else if path_str.contains(pattern) {
-                return true;
-            }
-        }
-
-        false
-    }
 }
 
 #[cfg(test)]

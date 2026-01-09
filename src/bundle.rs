@@ -104,7 +104,7 @@ pub async fn create_bundled_binary(
 
     // 4. Create archive with project files
     println!("Creating archive...");
-    let archive_data = create_archive(project_dir, &uv_path, &metadata, &config.exclude)?;
+    let archive_data = create_archive(project_dir, &uv_path, &metadata, &config.include)?;
 
     println!("Archive size: {} bytes", archive_data.len());
 
@@ -231,7 +231,7 @@ async fn create_app_bundle(
 
     // Create archive
     println!("Creating archive...");
-    let archive_data = create_archive(project_dir, &uv_path, &metadata, &config.exclude)?;
+    let archive_data = create_archive(project_dir, &uv_path, &metadata, &config.include)?;
 
     println!("Archive size: {} bytes", archive_data.len());
 
