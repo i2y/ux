@@ -12,9 +12,20 @@ uv-based Python App Launcher - distribute Python apps as single executables.
 
 ## Installation
 
+### Via uv (recommended)
+```bash
+uv tool install ux-py
+```
+
+### Via pip
+```bash
+pip install ux-py
+```
+
+### From GitHub Releases
 Download from [Releases](https://github.com/i2y/ux/releases)
 
-Or build from source:
+### Build from source
 ```bash
 cargo install --git https://github.com/i2y/ux
 ```
@@ -86,13 +97,17 @@ Use `[tool.ux].include` to add extra files or directories (with trailing slash)
 
 ## Supported Platforms
 
-| Target | Cross-compile from macOS |
-|--------|-------------------------|
-| darwin-x86_64 | Native |
-| darwin-aarch64 | Native |
-| linux-x86_64 | Yes |
-| linux-aarch64 | Yes |
-| windows-x86_64 | Yes |
+| Target | Cross-compile | PyPI |
+|--------|--------------|------|
+| darwin-x86_64 | Yes | Yes |
+| darwin-aarch64 | Yes | Yes |
+| linux-x86_64 | Yes | Yes |
+| linux-aarch64 | Yes | No* |
+| windows-x86_64 | Yes | Yes |
+
+Cross-compilation works from any platform by downloading pre-built stubs from GitHub Releases.
+
+\* Linux aarch64 is available from [GitHub Releases](https://github.com/i2y/ux/releases) only.
 
 ## License
 
