@@ -64,12 +64,28 @@ myapp = "myapp.main:main"  # Entry point
 
 [tool.ux]
 entry = "myapp"            # Optional: explicit entry point
+include = [                # Optional: additional files to include
+  "assets/",               # Include entire directory (trailing slash)
+  "config.yaml",           # Include specific file
+]
 
 [tool.ux.macos]
 icon = "assets/icon.png"   # PNG auto-converted to ICNS
 bundle_identifier = "com.example.myapp"
 bundle_name = "My App"
 ```
+
+### Default included files
+
+By default, the following files are included in the bundle:
+- `*.py` - Python source files
+- `*.yaml`, `*.yml`, `*.json` - Configuration/data files
+- `pyproject.toml`, `uv.lock` - Project files
+- `README.md`, `LICENSE` - Documentation
+
+The following directories are always excluded:
+- `.git`, `.venv`, `__pycache__`, `.pytest_cache`, `.mypy_cache`
+- `.claude`, `.ruff_cache`, `dist`, `build`, `node_modules`
 
 ## Supported Platforms
 
