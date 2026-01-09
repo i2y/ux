@@ -102,19 +102,8 @@ impl Config {
         // Get uv version
         let uv_version = ux_config.uv_version.unwrap_or_else(|| "latest".to_string());
 
-        // Get include patterns (whitelist approach)
-        let include = ux_config.include.unwrap_or_else(|| {
-            vec![
-                "*.py".to_string(),
-                "*.yaml".to_string(),
-                "*.yml".to_string(),
-                "*.json".to_string(),
-                "pyproject.toml".to_string(),
-                "uv.lock".to_string(),
-                "README.md".to_string(),
-                "LICENSE".to_string(),
-            ]
-        });
+        // Get include patterns for extra files/directories
+        let include = ux_config.include.unwrap_or_default();
 
         // Get macOS config
         let macos = ux_config.macos.clone();

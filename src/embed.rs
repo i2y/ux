@@ -137,20 +137,6 @@ pub fn create_bundle(stub_binary: &Path, archive_data: &[u8], output_path: &Path
     Ok(())
 }
 
-/// Directories to always exclude (not configurable)
-const ALWAYS_EXCLUDE_DIRS: &[&str] = &[
-    ".git",
-    ".venv",
-    "__pycache__",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".claude",
-    ".ruff_cache",
-    "dist",
-    "build",
-    "node_modules",
-];
-
 /// Create tar.gz archive from project files
 pub fn create_archive(
     project_dir: &Path,
@@ -177,8 +163,21 @@ pub fn create_archive(
         header.set_cksum();
         builder.append(&header, metadata_bytes)?;
 
-        // Add project files (whitelist approach)
-        add_directory_to_archive(&mut builder, project_dir, Path::new(""), include_patterns)?;
+        // Add required project files
+        for file in &["pyproject.toml", "uv.lock", "README.md", "LICENSE"] {
+            let file_path = project_dir.join(file);
+            if file_path.exists() {
+                builder.append_path_with_name(&file_path, file)?;
+            }
+        }
+
+        // Find and add package directory
+        let package_name = &metadata.project_name;
+        let package_dir = find_package_dir(project_dir, package_name)?;
+        add_package_directory(&mut builder, project_dir, &package_dir)?;
+
+        // Add extra files/directories from include patterns
+        add_extra_includes(&mut builder, project_dir, include_patterns)?;
 
         builder.finish()?;
     }
@@ -186,87 +185,64 @@ pub fn create_archive(
     Ok(archive_data)
 }
 
-/// Recursively add directory contents to archive (whitelist approach)
-fn add_directory_to_archive<W: Write>(
+/// Find the package directory (flat layout or src layout)
+fn find_package_dir(project_dir: &Path, package_name: &str) -> Result<PathBuf> {
+    // Try flat layout: ./package_name/
+    let flat_path = project_dir.join(package_name);
+    if flat_path.is_dir() {
+        return Ok(PathBuf::from(package_name));
+    }
+
+    // Try src layout: ./src/package_name/
+    let src_path = project_dir.join("src").join(package_name);
+    if src_path.is_dir() {
+        return Ok(PathBuf::from("src").join(package_name));
+    }
+
+    // Try with underscores instead of hyphens
+    let package_name_underscore = package_name.replace('-', "_");
+    let flat_path_underscore = project_dir.join(&package_name_underscore);
+    if flat_path_underscore.is_dir() {
+        return Ok(PathBuf::from(&package_name_underscore));
+    }
+
+    let src_path_underscore = project_dir.join("src").join(&package_name_underscore);
+    if src_path_underscore.is_dir() {
+        return Ok(PathBuf::from("src").join(&package_name_underscore));
+    }
+
+    Err(anyhow!(
+        "Package directory not found. Tried: {}, src/{}, {}, src/{}",
+        package_name,
+        package_name,
+        package_name_underscore,
+        package_name_underscore
+    ))
+}
+
+/// Add package directory contents to archive
+fn add_package_directory<W: Write>(
     builder: &mut Builder<W>,
     base_dir: &Path,
-    relative_path: &Path,
-    include_patterns: &[String],
+    package_relative_path: &Path,
 ) -> Result<()> {
-    let full_path = base_dir.join(relative_path);
+    let full_path = base_dir.join(package_relative_path);
 
     for entry in fs::read_dir(&full_path)? {
         let entry = entry?;
         let file_name = entry.file_name();
         let file_name_str = file_name.to_string_lossy();
 
-        // Always skip excluded directories
-        if ALWAYS_EXCLUDE_DIRS.contains(&file_name_str.as_ref()) {
+        // Skip __pycache__ directories
+        if file_name_str == "__pycache__" {
             continue;
         }
 
-        let entry_relative = relative_path.join(&file_name);
+        let entry_relative = package_relative_path.join(&file_name);
         let entry_path = entry.path();
 
         if entry_path.is_dir() {
-            // Check if directory is explicitly included (e.g., "assets/")
-            if is_directory_included(&entry_relative, include_patterns) {
-                // Add entire directory
-                add_entire_directory(builder, base_dir, &entry_relative)?;
-            } else {
-                // Recursively check for matching files
-                add_directory_to_archive(builder, base_dir, &entry_relative, include_patterns)?;
-            }
-        } else {
-            // Only add files that match include patterns
-            if should_include_file(&file_name_str, &entry_relative, include_patterns) {
-                builder.append_path_with_name(&entry_path, &entry_relative)?;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Check if a directory is explicitly included (pattern ends with "/")
-fn is_directory_included(relative_path: &Path, patterns: &[String]) -> bool {
-    let path_str = relative_path.to_string_lossy();
-
-    for pattern in patterns {
-        if pattern.ends_with('/') {
-            let dir_pattern = &pattern[..pattern.len() - 1];
-            // Match if path equals the pattern or starts with it
-            if path_str == dir_pattern || path_str.starts_with(&format!("{}/", dir_pattern)) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Add entire directory contents recursively (no filtering)
-fn add_entire_directory<W: Write>(
-    builder: &mut Builder<W>,
-    base_dir: &Path,
-    relative_path: &Path,
-) -> Result<()> {
-    let full_path = base_dir.join(relative_path);
-
-    for entry in fs::read_dir(&full_path)? {
-        let entry = entry?;
-        let file_name = entry.file_name();
-        let file_name_str = file_name.to_string_lossy();
-
-        // Still skip always-excluded directories even when including entire directory
-        if ALWAYS_EXCLUDE_DIRS.contains(&file_name_str.as_ref()) {
-            continue;
-        }
-
-        let entry_relative = relative_path.join(&file_name);
-        let entry_path = entry.path();
-
-        if entry_path.is_dir() {
-            add_entire_directory(builder, base_dir, &entry_relative)?;
+            add_package_directory(builder, base_dir, &entry_relative)?;
         } else {
             builder.append_path_with_name(&entry_path, &entry_relative)?;
         }
@@ -275,33 +251,61 @@ fn add_entire_directory<W: Write>(
     Ok(())
 }
 
-/// Check if a file should be included based on patterns
-fn should_include_file(name: &str, relative_path: &Path, patterns: &[String]) -> bool {
-    let path_str = relative_path.to_string_lossy();
-
-    for pattern in patterns {
-        if pattern.starts_with("*.") {
-            // Extension pattern (e.g., "*.py")
-            let ext = &pattern[1..]; // ".py"
-            if name.ends_with(ext) {
-                return true;
+/// Add extra files/directories specified in include patterns
+fn add_extra_includes<W: Write>(
+    builder: &mut Builder<W>,
+    base_dir: &Path,
+    include_patterns: &[String],
+) -> Result<()> {
+    for pattern in include_patterns {
+        if pattern.ends_with('/') {
+            // Directory pattern (e.g., "assets/")
+            let dir_name = &pattern[..pattern.len() - 1];
+            let dir_path = base_dir.join(dir_name);
+            if dir_path.is_dir() {
+                add_directory_recursive(builder, base_dir, Path::new(dir_name))?;
             }
-        } else if pattern.ends_with('/') {
-            // Directory pattern - handled elsewhere
-            continue;
-        } else if pattern.contains('/') {
-            // Path pattern (e.g., "config/settings.yaml")
-            if path_str == *pattern {
-                return true;
-            }
-        } else {
-            // Exact filename (e.g., "pyproject.toml")
-            if name == pattern {
-                return true;
+        } else if !pattern.contains('*') {
+            // Specific file (e.g., "config.yaml")
+            let file_path = base_dir.join(pattern);
+            if file_path.is_file() {
+                builder.append_path_with_name(&file_path, pattern)?;
             }
         }
+        // Skip glob patterns like "*.py" - package directory handles those
     }
-    false
+    Ok(())
+}
+
+/// Add directory contents recursively (skip __pycache__)
+fn add_directory_recursive<W: Write>(
+    builder: &mut Builder<W>,
+    base_dir: &Path,
+    relative_path: &Path,
+) -> Result<()> {
+    let full_path = base_dir.join(relative_path);
+
+    for entry in fs::read_dir(&full_path)? {
+        let entry = entry?;
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+
+        // Skip __pycache__
+        if file_name_str == "__pycache__" {
+            continue;
+        }
+
+        let entry_relative = relative_path.join(&file_name);
+        let entry_path = entry.path();
+
+        if entry_path.is_dir() {
+            add_directory_recursive(builder, base_dir, &entry_relative)?;
+        } else {
+            builder.append_path_with_name(&entry_path, &entry_relative)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Calculate hash of archive for cache directory name
