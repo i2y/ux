@@ -22,6 +22,7 @@ pub struct ToolSection {
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
+#[allow(dead_code)] // Used only on macOS
 pub struct MacOSConfig {
     /// Path to .icns or .png icon file (PNG will be converted to ICNS)
     pub icon: Option<String>,
@@ -61,6 +62,7 @@ pub struct Config {
     pub entry_point: String,
     pub uv_version: String,
     pub include: Vec<String>,
+    #[allow(dead_code)] // Used only on macOS
     pub macos: Option<MacOSConfig>,
 }
 
