@@ -75,17 +75,14 @@ bundle_identifier = "com.example.myapp"
 bundle_name = "My App"
 ```
 
-### Default included files
+### Included files
 
-By default, the following files are included in the bundle:
-- `*.py` - Python source files
-- `*.yaml`, `*.yml`, `*.json` - Configuration/data files
-- `pyproject.toml`, `uv.lock` - Project files
-- `README.md`, `LICENSE` - Documentation
+The bundle automatically includes:
+- Package directory (detected from `[project].name`, e.g., `myapp/` or `src/myapp/`)
+- `pyproject.toml`, `uv.lock`
+- `README.md`, `LICENSE` (if present)
 
-The following directories are always excluded:
-- `.git`, `.venv`, `__pycache__`, `.pytest_cache`, `.mypy_cache`
-- `.claude`, `.ruff_cache`, `dist`, `build`, `node_modules`
+Use `[tool.ux].include` to add extra files or directories (with trailing slash)
 
 ## Supported Platforms
 
