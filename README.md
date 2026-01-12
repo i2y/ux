@@ -5,7 +5,7 @@ uv-based Python App Launcher - distribute Python apps as single executables.
 ## Features
 
 - **Single binary distribution** - End users don't need Python or uv installed
-- **Cross-compilation** - Build for Linux/Windows from macOS
+- **Cross-compilation** - Build for Linux/Windows from any platform
 - **macOS .app bundle** - Native macOS application with icon support
 - **Code signing & Notarization** - Distribute through macOS Gatekeeper
 - **DMG creation** - Professional macOS distribution format
@@ -40,10 +40,10 @@ ux bundle --project /path/to/project --output ./dist/
 
 ### Cross-compilation
 ```bash
-# Build for Linux from macOS
+# Build for Linux (works from any platform)
 ux bundle --target linux-x86_64 --output ./dist/
 
-# Build for Windows from macOS
+# Build for Windows (works from any platform)
 ux bundle --target windows-x86_64 --output ./dist/
 ```
 
@@ -97,17 +97,21 @@ Use `[tool.ux].include` to add extra files or directories (with trailing slash)
 
 ## Supported Platforms
 
-| Target | Cross-compile | PyPI |
-|--------|--------------|------|
-| darwin-x86_64 | Yes | Yes |
-| darwin-aarch64 | Yes | Yes |
-| linux-x86_64 | Yes | Yes |
-| linux-aarch64 | Yes | No* |
-| windows-x86_64 | Yes | Yes |
+ux runs on macOS, Linux, and Windows. You can bundle apps for any supported target from any platform.
 
-Cross-compilation works from any platform by downloading pre-built stubs from GitHub Releases.
+| Target | Bundle | PyPI |
+|--------|--------|------|
+| darwin-x86_64 | ✓ | ✓ |
+| darwin-aarch64 | ✓ | ✓ |
+| linux-x86_64 | ✓ | ✓ |
+| linux-aarch64 | ✓ | No* |
+| windows-x86_64 | ✓ | ✓ |
 
 \* Linux aarch64 is available from [GitHub Releases](https://github.com/i2y/ux/releases) only.
+
+## Real-world Usage
+
+- [bkstg](https://github.com/i2y/bkstg) - A serverless desktop Internal Developer Portal built with [Castella](https://github.com/i2y/castella)
 
 ## License
 
